@@ -1,0 +1,294 @@
+using UnityEngine;
+using Cinemachine;
+using System.Collections.Generic;
+using Unity.Netcode;
+using System.Collections;
+using UnityEngine.AI;
+using System.Linq;
+using System;
+
+public struct PlayerInfo
+{
+    public ulong PlayerId;
+    public string PlayerName;
+    public int KillCount;
+    public int DeathCount;
+
+    public PlayerInfo(ulong playerId, string name, int killCount, int deathCount)
+    {
+        PlayerId = playerId;
+        PlayerName = name;
+        KillCount = killCount;
+        DeathCount = deathCount;
+    }
+}
+
+public interface IWaitForInGameManager
+{
+    /// <summary>
+    /// Được gọi khi InGameManager.Instance đã sẵn sàng.
+    /// </summary>
+    /// <param name="manager">Instance của InGameManager.</param>
+    void OnInGameManagerReady(InGameManager manager);
+}
+
+public static class InGameManagerWaiter
+{
+    /// <summary>
+    /// Gọi hàm callback khi InGameManager.Instance đã sẵn sàng.
+    /// </summary>
+    public static IEnumerator WaitForInGameManager(IWaitForInGameManager listener)
+    {
+        // Nếu đã có sẵn instance, gọi ngay.
+        if (InGameManager.Instance != null)
+        {
+            listener.OnInGameManagerReady(InGameManager.Instance);
+            yield break;
+        }
+
+        // Nếu chưa có, thì chờ sự kiện hoặc coroutine đợi.
+        bool done = false;
+
+        void Handler()
+        {
+            listener.OnInGameManagerReady(InGameManager.Instance);
+            done = true;
+            InGameManager.OnManagerReady -= Handler;
+        }
+
+        InGameManager.OnManagerReady += Handler;
+
+        // Chờ đến khi handler được gọi (hoặc Instance có sẵn)
+        yield return new WaitUntil(() => done == true || InGameManager.Instance != null);
+    }
+}
+
+public class InGameManager : NetworkBehaviour
+{
+    public static InGameManager Instance { get; private set; }
+    
+    [Header("Game Mode Configuration")]
+    [SerializeField] GameMode gameMode = GameMode.Multiplayer;
+    
+    [SerializeField] GameObject _playerFollowCamera;
+    [SerializeField] GameObject _playerCamera;
+    public CinemachineVirtualCamera PlayerFollowCamera { get; private set; }
+    public GameObject PlayerCamera { get; private set; }
+
+    public static event System.Action OnManagerReady;
+
+    public SpawnInGameManager spawnInGameManager { get; private set; }
+    public TimePhaseCounter TimePhaseCounter { get; private set; }
+    public KillCountChecker KillCountChecker { get; private set; }
+    public GenerateHealthPickup GenerateHealthPickup { get; private set; }
+    public LobbyRelayChecker LobbyRelayChecker { get; private set; }
+    public HandleSpawnBot HandleSpawnBot { get; private set; }
+    public RandomSpawn RandomSpawn { get; private set; }
+    public Waypoints Waypoints { get; private set; }
+    public ZoneController ZoneController { get; private set; }
+
+    public System.Action OnGameEnd;
+
+    public bool IsGameEnd = false;
+    [HideInInspector]
+    public NetworkVariable<bool> IsTimeOut = new();
+
+    public System.Action<List<PlayerInfo>> OnReceivedPlayerInfo;
+
+    public List<PlayerRoot> AllCharacters = new();
+    public Action<PlayerRoot> OnAnyPlayerDied;
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+        
+        // Initialize based on game mode
+        switch (gameMode)
+        {
+            case GameMode.Multiplayer:
+                InitializeMultiplayerMode();
+                break;
+                
+            case GameMode.WebSocketAgent:
+                InitializeWebSocketMode();
+                break;
+                
+            case GameMode.SinglePlayer:
+                InitializeSinglePlayerMode();
+                break;
+        }
+        
+        // Common initialization (runs for all modes)
+        PlayerCamera = Instantiate(_playerCamera);
+        GameObject obj = Instantiate(_playerFollowCamera);
+        PlayerFollowCamera = obj.GetComponent<CinemachineVirtualCamera>();
+        
+        spawnInGameManager = GameObject.FindGameObjectsWithTag("NavigationPoint").FirstOrDefault().GetComponent<SpawnInGameManager>();
+        TimePhaseCounter = GetComponent<TimePhaseCounter>();
+        KillCountChecker = GetComponent<KillCountChecker>();
+        GenerateHealthPickup = GetComponent<GenerateHealthPickup>();
+        HandleSpawnBot = GetComponent<HandleSpawnBot>();
+        RandomSpawn = GetComponent<RandomSpawn>();
+        Waypoints = GetComponent<Waypoints>();
+        ZoneController = GetComponent<ZoneController>();
+        
+        // Initialize lobby/relay checker only in multiplayer mode
+        if (gameMode == GameMode.Multiplayer)
+        {
+            LobbyRelayChecker = GetComponent<LobbyRelayChecker>();
+        }
+
+        OnGameEnd += () =>
+        {
+            IsGameEnd = true;
+        };
+        
+        if (spawnInGameManager != null)
+        {
+            ZoneController.InitZones(
+                spawnInGameManager.GetZonesContainer(),
+                spawnInGameManager.GetZonePortalsContainer()
+            );
+        }
+    }
+    
+    /// <summary>
+    /// Initialize WebSocket agent mode - bypasses Relay/Lobby/NGO
+    /// </summary>
+    void InitializeWebSocketMode()
+    {
+        Debug.Log("[InGameManager] Initializing WebSocket Agent Mode");
+        
+        // Start WebSocket server
+        WebSocketServerManager.Instance?.Initialize();
+        
+        Debug.Log("[InGameManager] WebSocket mode initialized - no network services required");
+    }
+    
+    /// <summary>
+    /// Initialize single-player mode for testing
+    /// </summary>
+    void InitializeSinglePlayerMode()
+    {
+        Debug.Log("[InGameManager] Initializing Single Player Mode");
+        // Similar to WebSocket mode but without WebSocket server
+    }
+    
+    /// <summary>
+    /// Initialize multiplayer mode (existing behavior)
+    /// </summary>
+    void InitializeMultiplayerMode()
+    {
+        Debug.Log("[InGameManager] Initializing Multiplayer Mode");
+        // Existing multiplayer initialization logic
+        // LobbyRelayChecker will be initialized in common section
+    }
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        OnManagerReady?.Invoke();
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        Instance = null;
+    }
+
+    public void GetAllPlayerInfos()
+    {
+        GetAllPlayerInfos_ServerRPC();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    void GetAllPlayerInfos_ServerRPC(ServerRpcParams rpcParams = default)
+    {
+        // Chỉ chạy đoạn này nếu là server
+        if (!NetworkManager.Singleton.IsServer) return;
+
+        string result = "";
+        foreach (NetworkClient client in NetworkManager.Singleton.ConnectedClientsList)
+        {
+            if (client.PlayerObject.TryGetComponent<PlayerNetwork>(out var playerNetwork))
+            {
+                result += $"{playerNetwork.OwnerClientId};{playerNetwork.playerName};{playerNetwork.KillCount.Value};{playerNetwork.DeathCount.Value}|";
+            }
+        }
+
+        // Gửi kết quả về đúng client đã yêu cầu
+        ulong requestingClientId = rpcParams.Receive.SenderClientId;
+        ClientRpcParams clientRpcParams = new()
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new List<ulong> { requestingClientId }
+            }
+        };
+
+        GetAllPlayerInfos_ClientRPC(result, clientRpcParams);
+    }
+
+    [ClientRpc]
+    void GetAllPlayerInfos_ClientRPC(string data, ClientRpcParams clientRpcParams = default)
+    {
+        List<PlayerInfo> playerInfos = new();
+        string[] playerEntries = data.Split('|', System.StringSplitOptions.RemoveEmptyEntries);
+        foreach (string entry in playerEntries)
+        {
+            string[] tokens = entry.Split(';');
+            if (tokens.Length == 4)
+            {
+                ulong id = ulong.Parse(tokens[0]);
+                string name = tokens[1];
+                int kill = int.Parse(tokens[2]);
+                int death = int.Parse(tokens[3]);
+                playerInfos.Add(new PlayerInfo(id, name, kill, death));
+
+                Debug.Log($"Id: {id}, Name: {name}, Kill: {kill}, Death: {death}");
+            }
+        }
+        OnReceivedPlayerInfo?.Invoke(playerInfos);
+    }
+
+    /// <summary>
+    /// Tính hướng di chuyển từ owner đến target dựa vào NavMesh pathfinding
+    /// </summary>
+    /// <param name="owner">Transform của bot (đang điều khiển)</param>
+    /// <param name="target">Transform của mục tiêu cần di chuyển đến</param>
+    /// <returns>Vector2 hướng di chuyển (x,z) đã được normalize</returns>
+    public Vector2 PathFinding(Transform owner, Transform target)
+    {
+        if (owner == null || target == null)
+            return Vector2.zero;
+
+        NavMeshPath path = new();
+
+        // Tính đường đi trên NavMesh
+        if (!NavMesh.CalculatePath(owner.position, target.position, NavMesh.AllAreas, path))
+        {
+            Debug.LogWarning($"[PathFinding] Cannot find path from {owner.name} to {target.name}");
+            return Vector2.zero;
+        }
+
+        // Nếu không có điểm nào trong path hoặc path lỗi
+        if (path.corners.Length < 2)
+        {
+            return Vector2.zero;
+        }
+
+        // Điểm kế tiếp để di chuyển tới
+        Vector3 nextCorner = path.corners[1];
+        Vector3 dir = nextCorner - owner.position;
+        dir.y = 0f; // Bỏ qua độ cao để tránh nghiêng hướng
+
+        // Chuyển sang Vector2 move input
+        Vector2 moveDir = new Vector2(dir.x, dir.z).normalized;
+
+        return moveDir;
+    }
+}

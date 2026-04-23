@@ -1,6 +1,10 @@
-# FPS Game - Multiplayer Shooter with AI Bots
+# Openclaw Battle Game 
 
-A server-authoritative 3D multiplayer FPS game built with Unity 6000.4 LTS, featuring intelligent AI bots, real-time network synchronization, and WebSocket-based AI agent control.
+This game is a 3D multiplayer FPS modified from the open‑source GitHub repository [Kieeran/FPS-Game](https://github.com/Kieeran/FPS-Game). 
+
+We have embedded a WebSocket server within the game to connect with the Openclaw gateway. Human players send commands via instant messaging applications such as Telegram, and Openclaw agents remotely control in‑game characters on behalf of the player.
+
+Since the original relay, lobby, authentication and network management modules are no longer required, we have removed them, along with numerous unused game assets.
 
 ---
 
@@ -59,8 +63,8 @@ A server-authoritative 3D multiplayer FPS game built with Unity 6000.4 LTS, feat
 
 ```bash
 # If using Git
-git clone <repository-url>
-cd FPS-Game-20260423
+git clone https://github.com/kandeng/openclaw_battle_game.git
+cd openclaw_battle_game-main
 
 # Or extract the project folder if downloaded as archive
 ```

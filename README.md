@@ -6,6 +6,9 @@ We have embedded a WebSocket server within the game to connect with the Openclaw
 
 Since the original relay, lobby, authentication and network management modules are no longer required, we have removed them, along with numerous unused game assets.
 
+The size of [Kieeran/FPS-Game](https://github.com/Kieeran/FPS-Game) is 4.3G. And the size of our repo is 1.2G.
+
+
 ---
 
 ## Features

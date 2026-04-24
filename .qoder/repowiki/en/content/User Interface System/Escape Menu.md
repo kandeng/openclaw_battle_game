@@ -12,6 +12,14 @@
 - [InputManager.asset](file://ProjectSettings/InputManager.asset)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated EscapeUI section to reflect removal of lobby host check - quit button is now always visible
+- Updated PlayerUI section to reflect removal of LobbyManager dependencies in quit flow
+- Updated architecture diagrams to show simplified quit flow without lobby integration
+- Updated troubleshooting guide to address new simplified quit behavior
+- Updated accessibility and theme options to reflect always-visible quit button
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -25,7 +33,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains the escape menu system responsible for pause functionality and game state management. It covers how the pause menu is triggered, how the game state is suspended/resumed, and how the system integrates with the lobby and session management. It also documents input handling during pause, cursor behavior, and the relationship with InGameManager for synchronized UI updates. Practical examples show menu state transitions, input handling, and integration with multiplayer sessions.
+This document explains the escape menu system responsible for pause functionality and game state management. It covers how the pause menu is triggered, how the game state is suspended/resumed, and how the system integrates with the lobby and session management. The system has been simplified to remove lobby-specific host controls, making the quit button always visible regardless of player role. It also documents input handling during pause, cursor behavior, and the relationship with InGameManager for synchronized UI updates. Practical examples show menu state transitions, input handling, and integration with multiplayer sessions.
 
 ## Project Structure
 The escape/pause system spans several scripts:
@@ -35,7 +43,7 @@ The escape/pause system spans several scripts:
 - PlayerUI: Bridges input events to canvas toggles and handles quit propagation.
 - PlayerAssetsInputs: Provides input state for toggling the escape UI.
 - InGameManager: Supplies game state and synchronization hooks.
-- LobbyManager: Coordinates lobby and session lifecycle, including exit and shutdown.
+- LobbyManager: Previously coordinated lobby and session lifecycle, but is no longer used in quit flow.
 
 ```mermaid
 graph TB
@@ -52,8 +60,8 @@ PUI --> LM
 **Diagram sources**
 - [PauseMenu.cs:13-68](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L13-L68)
 - [PlayerCanvas.cs:1-91](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas.cs#L1-L91)
-- [EscapeUI.cs:1-18](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L18)
-- [PlayerUI.cs:1-191](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L191)
+- [EscapeUI.cs:1-19](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L19)
+- [PlayerUI.cs:1-203](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L203)
 - [PlayerAssetsInputs.cs:66-240](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L66-L240)
 - [InGameManager.cs:66-232](file://Assets/FPS-Game/Scripts/System/InGameManager.cs#L66-L232)
 - [LobbyManager.cs:13-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L13-L589)
@@ -61,29 +69,29 @@ PUI --> LM
 **Section sources**
 - [PauseMenu.cs:13-68](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L13-L68)
 - [PlayerCanvas.cs:1-91](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas.cs#L1-L91)
-- [EscapeUI.cs:1-18](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L18)
-- [PlayerUI.cs:1-191](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L191)
+- [EscapeUI.cs:1-19](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L19)
+- [PlayerUI.cs:1-203](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L203)
 - [PlayerAssetsInputs.cs:66-240](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L66-L240)
 - [InGameManager.cs:66-232](file://Assets/FPS-Game/Scripts/System/InGameManager.cs#L66-L232)
 - [LobbyManager.cs:13-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L13-L589)
 
 ## Core Components
 - PauseMenu: Toggles pause state, manages Time.timeScale, and exposes navigation actions (main menu and quit).
-- EscapeUI: A small UI controller bound to the canvas that hides/shows based on toggle and conditionally enables the quit button for lobby hosts.
+- EscapeUI: A small UI controller bound to the canvas that hides/shows based on toggle and always displays the quit button.
 - PlayerCanvas: Central UI hub that toggles EscapeUI and manages cursor lock/unlock.
 - PlayerUI: Receives input events and toggles EscapeUI via PlayerCanvas; also coordinates quit propagation across clients.
 - PlayerAssetsInputs: Provides input state for EscapeUI toggle and other actions.
 - InGameManager: Supplies synchronization hooks and game state for UI updates.
-- LobbyManager: Handles lobby lifecycle and session exit.
+- LobbyManager: Previously handled lobby lifecycle and session exit, but is no longer used in quit flow.
 
 Key responsibilities:
 - Pause/Resume: Controlled by PauseMenu and reflected in PlayerCanvas cursor behavior.
 - Input handling: EscapeUI toggle is driven by PlayerAssetsInputs and PlayerUI.
-- Session integration: Quit actions propagate to LobbyManager and NetworkManager.
+- Session integration: Quit actions now bypass lobby and go directly to application shutdown.
 
 **Section sources**
 - [PauseMenu.cs:13-68](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L13-L68)
-- [EscapeUI.cs:1-18](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L18)
+- [EscapeUI.cs:1-19](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L19)
 - [PlayerCanvas.cs:1-91](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas.cs#L1-L91)
 - [PlayerUI.cs:128-191](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L128-L191)
 - [PlayerAssetsInputs.cs:138-142](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L138-L142)
@@ -91,7 +99,7 @@ Key responsibilities:
 - [LobbyManager.cs:571-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L571-L589)
 
 ## Architecture Overview
-The pause system orchestrates input, UI, and session state:
+The pause system orchestrates input, UI, and session state with a simplified quit flow:
 
 ```mermaid
 sequenceDiagram
@@ -114,10 +122,9 @@ Player->>Pause : "Press Escape again"
 Pause->>Pause : "isPaused ? ResumeGame() : PauseGame()"
 Pause->>Canvas : "Cursor unlocked during pause"
 Pause->>InGame : "Time.timeScale = 0/1"
-Player->>Escape : "Click Quit (host only)"
+Player->>Escape : "Click Quit (always visible)"
 Escape->>PlayerUI : "InvokeOnQuitGame()"
-PlayerUI->>Lobby : "ExitGame() and Shutdown"
-PlayerUI->>Lobby : "Load 'Lobby Room'"
+PlayerUI->>PlayerUI : "Shutdown network and quit app"
 ```
 
 **Diagram sources**
@@ -152,15 +159,17 @@ Integration points:
 ### EscapeUI
 Responsibilities:
 - Display the escape UI panel.
-- Enable the Quit Game button only for lobby hosts.
-- Trigger quit events to the owning player’s UI.
+- Always enable the Quit Game button for all players.
+- Trigger quit events to the owning player's UI.
+
+**Updated** The lobby host check has been removed, making the quit button always visible regardless of player role. This simplifies the UI but removes lobby-specific host controls.
 
 Integration:
 - Bound to PlayerCanvas for activation/deactivation.
-- Relies on LobbyManager to gate quit button visibility.
+- No longer relies on LobbyManager to gate quit button visibility.
 
 **Section sources**
-- [EscapeUI.cs:1-18](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L18)
+- [EscapeUI.cs:1-19](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L19)
 
 ### PlayerCanvas
 Responsibilities:
@@ -179,6 +188,8 @@ Responsibilities:
 - Bridge input events to UI toggles.
 - Toggle EscapeUI via PlayerCanvas.
 - Coordinate quit actions across networked clients.
+
+**Updated** The quit flow has been simplified to bypass LobbyManager. Quit actions now directly shutdown the network and quit the application.
 
 Pause-related behavior:
 - Reads PlayerAssetsInputs.escapeUI to toggle EscapeUI.
@@ -212,12 +223,14 @@ Pause-related behavior:
 - [InGameManager.cs:66-232](file://Assets/FPS-Game/Scripts/System/InGameManager.cs#L66-L232)
 
 ### LobbyManager
+**Updated** LobbyManager is no longer used in the escape menu system. The quit flow has been simplified to bypass lobby integration entirely.
+
 Responsibilities:
-- Manage lobby lifecycle and session exit.
+- Previously managed lobby lifecycle and session exit.
 - Exit and shutdown network/session on quit.
 
 Pause-related behavior:
-- Used by PlayerUI to exit the game and load the lobby scene.
+- No longer used by PlayerUI to exit the game and load the lobby scene.
 - ExitGame updates lobby state to signal session termination.
 
 **Section sources**
@@ -261,16 +274,16 @@ PauseMenu --> PlayerCanvas : "controls UI and time scale"
 EscapeUI --> PlayerCanvas : "bound to"
 PlayerUI --> PlayerCanvas : "toggles UI"
 PlayerUI --> PlayerAssetsInputs : "reads input"
-PlayerUI --> LobbyManager : "exits session"
+PlayerUI --> LobbyManager : "no longer used for quit"
 PauseMenu --> LobbyManager : "session cleanup"
 PlayerCanvas --> InGameManager : "UI sync"
 ```
 
 **Diagram sources**
 - [PauseMenu.cs:13-68](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L13-L68)
-- [EscapeUI.cs:1-18](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L18)
+- [EscapeUI.cs:1-19](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L19)
 - [PlayerCanvas.cs:1-91](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas.cs#L1-L91)
-- [PlayerUI.cs:1-191](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L191)
+- [PlayerUI.cs:1-203](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L203)
 - [PlayerAssetsInputs.cs:66-240](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L66-L240)
 - [InGameManager.cs:66-232](file://Assets/FPS-Game/Scripts/System/InGameManager.cs#L66-L232)
 - [LobbyManager.cs:13-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L13-L589)
@@ -320,35 +333,37 @@ Canvas->>Canvas : "Lock/Unlock cursor"
 - [PlayerCanvas.cs:44-48](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas.cs#L44-L48)
 - [EscapeUI.cs:9-17](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L9-L17)
 
-### Quit Flow and Multiplayer Cleanup
+### Simplified Quit Flow and Direct Cleanup
+**Updated** The quit flow has been simplified to bypass lobby integration:
+
 ```mermaid
 sequenceDiagram
 participant Escape as "EscapeUI"
 participant PlayerUI as "PlayerUI"
-participant Lobby as "LobbyManager"
 participant Net as "NetworkManager"
 Escape->>PlayerUI : "InvokeOnQuitGame()"
 PlayerUI->>Net : "Shutdown()"
-PlayerUI->>Lobby : "ExitGame()"
-PlayerUI->>Lobby : "Load 'Lobby Room'"
+PlayerUI->>PlayerUI : "Direct application quit"
 ```
 
 **Diagram sources**
 - [EscapeUI.cs:13-16](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L13-L16)
 - [PlayerUI.cs:128-158](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L128-L158)
-- [LobbyManager.cs:571-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L571-L589)
+- [PlayerUI.cs:133-144](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L133-L144)
 
 **Section sources**
 - [EscapeUI.cs:13-16](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L13-L16)
 - [PlayerUI.cs:128-158](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L128-L158)
-- [LobbyManager.cs:571-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L571-L589)
+- [PlayerUI.cs:133-144](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L133-L144)
 
 ## Dependency Analysis
+**Updated** Dependencies have been simplified with the removal of lobby integration:
+
 - PauseMenu depends on PlayerCanvas for UI state and on LobbyManager for session cleanup.
-- EscapeUI depends on LobbyManager for host-only quit button visibility.
+- EscapeUI no longer depends on LobbyManager for host-only quit button visibility.
 - PlayerUI depends on PlayerAssetsInputs for input state and on PlayerCanvas for toggling.
 - PlayerCanvas depends on EscapeUI for activation and on InGameManager for UI synchronization.
-- PlayerUI and LobbyManager coordinate multiplayer quit behavior.
+- PlayerUI and LobbyManager no longer coordinate multiplayer quit behavior.
 
 ```mermaid
 graph LR
@@ -363,18 +378,18 @@ PC --> IM["InGameManager"]
 
 **Diagram sources**
 - [PlayerAssetsInputs.cs:66-240](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L66-L240)
-- [PlayerUI.cs:1-191](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L191)
+- [PlayerUI.cs:1-203](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L203)
 - [PlayerCanvas.cs:1-91](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas.cs#L1-L91)
-- [EscapeUI.cs:1-18](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L18)
+- [EscapeUI.cs:1-19](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L19)
 - [PauseMenu.cs:13-68](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L13-L68)
 - [LobbyManager.cs:13-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L13-L589)
 - [InGameManager.cs:66-232](file://Assets/FPS-Game/Scripts/System/InGameManager.cs#L66-L232)
 
 **Section sources**
 - [PlayerAssetsInputs.cs:66-240](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L66-L240)
-- [PlayerUI.cs:1-191](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L191)
+- [PlayerUI.cs:1-203](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L1-L203)
 - [PlayerCanvas.cs:1-91](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas.cs#L1-L91)
-- [EscapeUI.cs:1-18](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L18)
+- [EscapeUI.cs:1-19](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L1-L19)
 - [PauseMenu.cs:13-68](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L13-L68)
 - [LobbyManager.cs:13-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L13-L589)
 - [InGameManager.cs:66-232](file://Assets/FPS-Game/Scripts/System/InGameManager.cs#L66-L232)
@@ -383,6 +398,7 @@ PC --> IM["InGameManager"]
 - Time.timeScale manipulation: Pausing sets Time.timeScale to zero, which stops physics and animations. Ensure all time-dependent systems use unscaled time when necessary.
 - Cursor state: Frequent lock/unlock can cause UI flicker; minimize redundant toggles by checking current state before switching.
 - Input polling: Escape key detection occurs every frame; keep input checks lightweight and avoid heavy operations inside Update loops.
+- **Updated** Simplified quit flow reduces overhead by eliminating lobby manager calls and direct application shutdown.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -406,22 +422,28 @@ Common issues and resolutions:
   - Section sources
     - [PauseMenu.cs:42-66](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L42-L66)
 
-- Quit propagation in multiplayer:
-  - Symptom: Only host quits; others remain in session.
-  - Resolution: Use PlayerUI’s quit RPCs to notify clients and trigger NetworkManager shutdown and lobby exit.
+- **Updated** Simplified quit behavior:
+  - Symptom: Quit button appears for all players but doesn't navigate to lobby.
+  - Resolution: This is expected behavior. The quit flow now directly shuts down the network and quits the application without lobby integration.
   - Section sources
-    - [PlayerUI.cs:128-158](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L128-L158)
-    - [LobbyManager.cs:571-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L571-L589)
+    - [EscapeUI.cs:11-12](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L11-L12)
+    - [PlayerUI.cs:133-144](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L133-L144)
+
+- **Updated** Direct application quit:
+  - Symptom: Game quits immediately without lobby transition.
+  - Resolution: This is the intended behavior. The system now bypasses lobby integration for simpler quit flow.
+  - Section sources
+    - [PlayerUI.cs:133-144](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L133-L144)
 
 ## Conclusion
-The escape menu system cleanly separates pause mechanics (PauseMenu), UI toggling (PlayerCanvas and EscapeUI), and input handling (PlayerAssetsInputs and PlayerUI). It integrates with InGameManager for UI synchronization and with LobbyManager for session lifecycle management. By following the documented patterns and troubleshooting steps, developers can maintain responsive pause behavior, avoid input conflicts, and ensure proper cleanup across single-player and multiplayer contexts.
+The escape menu system has been simplified to remove lobby-specific host controls, making the quit button always visible regardless of player role. The system cleanly separates pause mechanics (PauseMenu), UI toggling (PlayerCanvas and EscapeUI), and input handling (PlayerAssetsInputs and PlayerUI). While it still integrates with InGameManager for UI synchronization, the quit flow now bypasses LobbyManager for direct application shutdown. By following the documented patterns and troubleshooting steps, developers can maintain responsive pause behavior, avoid input conflicts, and ensure proper cleanup across single-player and multiplayer contexts.
 
 ## Appendices
 
 ### Keyboard Shortcuts and Input Configuration
 - Escape key:
   - Purpose: Toggle pause and EscapeUI.
-  - Configuration: Defined in InputManager asset under the “Cancel” axis.
+  - Configuration: Defined in InputManager asset under the "Cancel" axis.
   - Section sources
     - [InputManager.asset:280-296](file://ProjectSettings/InputManager.asset#L280-L296)
 
@@ -432,11 +454,10 @@ The escape menu system cleanly separates pause mechanics (PauseMenu), UI togglin
     - [PauseMenu.cs:28-29](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L28-L29)
     - [PlayerCanvas.cs:47](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas.cs#L47)
 
-- Host-only quit button:
-  - The Quit Game button is hidden for non-hosts via LobbyManager checks.
+- **Updated** Always-visible quit button:
+  - The Quit Game button is now visible for all players, simplifying the UI but removing lobby-specific host controls.
   - Section sources
-    - [EscapeUI.cs:11](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L11)
-    - [LobbyManager.cs:213-216](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L213-L216)
+    - [EscapeUI.cs:11-12](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L11-L12)
 
 ### Practical Examples
 - Example: Toggle EscapeUI via input
@@ -451,9 +472,9 @@ The escape menu system cleanly separates pause mechanics (PauseMenu), UI togglin
   - Section sources
     - [PauseMenu.cs:25-52](file://Assets/FPS-Game/Scripts/Lobby Script/PauseMenu/Scripts/PauseMenu.cs#L25-L52)
 
-- Example: Quit and session exit
-  - Steps: EscapeUI triggers quit → PlayerUI shuts down network and exits lobby → loads lobby scene.
+- **Updated** Example: Simplified quit and direct application exit
+  - Steps: EscapeUI triggers quit → PlayerUI shuts down network and quits application directly → no lobby integration.
   - Section sources
     - [EscapeUI.cs:13-16](file://Assets/FPS-Game/Scripts/Player/PlayerCanvas/EscapeUI.cs#L13-L16)
     - [PlayerUI.cs:128-158](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L128-L158)
-    - [LobbyManager.cs:571-589](file://Assets/FPS-Game/Scripts/Lobby Script/Lobby/Scripts/LobbyManager.cs#L571-L589)
+    - [PlayerUI.cs:133-144](file://Assets/FPS-Game/Scripts/Player/PlayerUI.cs#L133-L144)

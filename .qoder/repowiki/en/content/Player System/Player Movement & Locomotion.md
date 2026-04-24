@@ -13,6 +13,13 @@
 - [BotAnimator.controller](file://Assets/FPS-Game/Animations/BotAnimation/BotAnimator.controller)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated rigidbody-based movement system documentation to reflect Unity Physics API evolution
+- Added documentation for `linearDamping` and `linearVelocity` usage replacing deprecated `drag` and `velocity`
+- Enhanced physics operations section with current Unity best practices
+- Updated troubleshooting guide with new physics-related considerations
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -27,6 +34,8 @@
 ## Introduction
 This document explains the player movement and locomotion system, focusing on the CharacterController-based movement used by human players and the dual-mode movement system that supports both human players and AI bots. It covers smooth movement interpolation, rotation dynamics, ground detection, jump and gravity handling, and synchronization with the Animator. It also documents movement parameters, input processing differences, collision detection, terminal velocity, and how movement states are synchronized in networked gameplay.
 
+**Updated** The system now reflects Unity's Physics API evolution, utilizing modern properties like `linearDamping` and `linearVelocity` for improved performance and compatibility.
+
 ## Project Structure
 The movement system spans several scripts under the Player and Bot namespaces:
 - Human player movement: PlayerController handles movement, rotation, jumping, gravity, and Animator synchronization.
@@ -34,7 +43,7 @@ The movement system spans several scripts under the Player and Bot namespaces:
 - Root orchestration: PlayerRoot coordinates components and exposes shared references and events.
 - Animation: PlayerAnimation bridges Animator events to audio feedback.
 - AI movement: BotController orchestrates Behavior Designer tasks and feeds movement/look vectors to PlayerController via AIInputFeeder.
-- Alternative movement model: PlayerMovement demonstrates a rigidbody-based movement system for comparison.
+- Alternative movement model: PlayerMovement demonstrates a rigidbody-based movement system using Unity's modern Physics API with `linearDamping` and `linearVelocity`.
 
 ```mermaid
 graph TB
@@ -44,13 +53,16 @@ PC["PlayerController"]
 PA["PlayerAnimation"]
 BM["BotController"]
 AIF["AIInputFeeder"]
+PM["PlayerMovement"]
 PR --> PAC
 PR --> PC
 PR --> PA
 PR --> BM
+PR --> PM
 BM --> AIF
 AIF --> PC
 PC --> PA
+PM --> PAC
 ```
 
 **Diagram sources**
@@ -60,6 +72,7 @@ PC --> PA
 - [PlayerAnimation.cs:1-50](file://Assets/FPS-Game/Scripts/Player/PlayerAnimation.cs#L1-L50)
 - [BotController.cs:1-485](file://Assets/FPS-Game/Scripts/Bot/BotController.cs#L1-L485)
 - [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
+- [PlayerMovement.cs:1-158](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L1-L158)
 
 **Section sources**
 - [PlayerRoot.cs:159-366](file://Assets/FPS-Game/Scripts/Player/PlayerRoot.cs#L159-L366)
@@ -68,6 +81,7 @@ PC --> PA
 - [PlayerAnimation.cs:1-50](file://Assets/FPS-Game/Scripts/Player/PlayerAnimation.cs#L1-L50)
 - [BotController.cs:1-485](file://Assets/FPS-Game/Scripts/Bot/BotController.cs#L1-L485)
 - [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
+- [PlayerMovement.cs:1-158](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L1-L158)
 
 ## Core Components
 - PlayerController: Implements CharacterController-based movement, ground detection, jumping, gravity, rotation smoothing, and Animator parameter updates. It supports both human input and AI input via AIInputFeeder.
@@ -76,7 +90,9 @@ PC --> PA
 - PlayerAnimation: Bridges Animator events to audio playback and manages rig builder updates.
 - BotController: Orchestrates Behavior Designer states and feeds movement/look vectors to PlayerController via AIInputFeeder.
 - AIInputFeeder: Receives movement and look data from BotController and exposes them to PlayerController.
-- PlayerMovement: Alternative rigidbody-based movement system for comparison and educational purposes.
+- PlayerMovement: Alternative rigidbody-based movement system using Unity's modern Physics API with `linearDamping` and `linearVelocity` for improved performance.
+
+**Updated** The PlayerMovement system now utilizes Unity's current Physics API standards, replacing deprecated properties with modern equivalents.
 
 **Section sources**
 - [PlayerController.cs:13-486](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L13-L486)
@@ -191,7 +207,7 @@ These parameters are declared and used in PlayerController and influence movemen
 
 ### Ground Detection and Collision Handling
 - GroundedCheck performs a sphere cast at a position offset below the character, using GroundedRadius and GroundLayers. The offset is slightly adjusted for AI movement to avoid false positives.
-- The grounded state is synchronized to the Animator’s Grounded parameter.
+- The grounded state is synchronized to the Animator's Grounded parameter.
 - JumpAndGravity resets vertical velocity when grounded and applies gravity otherwise, enforcing terminal velocity.
 
 ```mermaid
@@ -275,13 +291,14 @@ PlayerAnimation --> PlayerController : "receives Animator events"
 - [PlayerAnimator.controller:171-213](file://Assets/FPS-Game/Animations/StarterAssets/MainAni/PlayerAnimator.controller#L171-L213)
 - [PlayerAnimation.cs:1-50](file://Assets/FPS-Game/Scripts/Player/PlayerAnimation.cs#L1-L50)
 
-### Alternative Movement Model (Rigidbody-Based)
-PlayerMovement demonstrates a rigidbody-based approach:
+### Alternative Movement Model (Rigidbody-Based) - Unity Physics API Evolution
+**Updated** PlayerMovement demonstrates a rigidbody-based approach using Unity's modern Physics API:
 - Uses a state machine (walking, sprinting, air) and applies forces to a rigidbody with optional air multiplier.
-- Employs raycasting for ground detection and drag to simulate friction when grounded.
-- Includes a separate speed control method to cap horizontal velocity.
+- Employs raycasting for ground detection and `linearDamping` to simulate friction when grounded, replacing the deprecated `drag` property.
+- Includes a separate speed control method to cap horizontal velocity using `linearVelocity`, replacing the deprecated `velocity` property.
+- Leverages `linearVelocity.magnitude` and `linearVelocity.y` for dynamic effects like bobbing and sway calculations.
 
-While not used by the primary CharacterController-based system, it serves as a useful contrast and reference for alternative movement designs.
+The system now reflects Unity's Physics API evolution where `linearDamping` provides more accurate damping calculations and `linearVelocity` offers better performance than the legacy `velocity` property.
 
 **Section sources**
 - [PlayerMovement.cs:1-158](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L1-L158)
@@ -296,6 +313,7 @@ While not used by the primary CharacterController-based system, it serves as a u
 - PlayerRoot aggregates and initializes these dependencies and exposes them to subsystems.
 - BotController publishes movement/look data consumed by AIInputFeeder and relayed to PlayerController.
 - PlayerAnimation listens to Animator events and triggers audio feedback.
+- PlayerMovement depends on PlayerAssetsInputs and uses Unity's modern Physics API.
 
 ```mermaid
 graph TB
@@ -310,6 +328,7 @@ PR --> BM
 PR --> PAC
 PR --> AIF
 PA["PlayerAnimation"] --> PC
+PM["PlayerMovement"] --> PAC
 ```
 
 **Diagram sources**
@@ -318,6 +337,7 @@ PA["PlayerAnimation"] --> PC
 - [BotController.cs:1-485](file://Assets/FPS-Game/Scripts/Bot/BotController.cs#L1-L485)
 - [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
 - [PlayerAnimation.cs:1-50](file://Assets/FPS-Game/Scripts/Player/PlayerAnimation.cs#L1-L50)
+- [PlayerMovement.cs:12-13](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L12-L13)
 
 **Section sources**
 - [PlayerController.cs:13-486](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L13-L486)
@@ -325,6 +345,7 @@ PA["PlayerAnimation"] --> PC
 - [BotController.cs:1-485](file://Assets/FPS-Game/Scripts/Bot/BotController.cs#L1-L485)
 - [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
 - [PlayerAnimation.cs:1-50](file://Assets/FPS-Game/Scripts/Player/PlayerAnimation.cs#L1-L50)
+- [PlayerMovement.cs:12-13](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L12-L13)
 
 ## Performance Considerations
 - Prefer smooth damping with RotationSmoothTime to reduce jitter without over-smoothing.
@@ -332,6 +353,7 @@ PA["PlayerAnimation"] --> PC
 - Limit ground check radius and layers to relevant geometry to minimize overlap checks.
 - Avoid excessive Animator parameter updates; batch or throttle where appropriate.
 - For AI, precompute rotations and directions to minimize per-frame branching in BotController.
+- **Updated** When using rigidbody-based movement, leverage `linearDamping` and `linearVelocity` for better performance than deprecated `drag` and `velocity` properties.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -344,18 +366,24 @@ Common issues and resolutions:
   - Ensure CinemachineCameraTarget rotation updates occur consistently in LateUpdate.
 - Ground detection false positives/negatives
   - Increase GroundedRadius slightly if the character hops or detaches from ground.
-  - Verify GroundedOffset places the sphere beneath the character’s feet.
+  - Verify GroundedOffset places the sphere beneath the character's feet.
   - Confirm GroundLayers includes terrain and walkable surfaces.
 - Terminal velocity feels too fast/slow
   - Adjust Gravity and/or TerminalVelocity to tune fall acceleration and cap.
 - Animator mismatch (e.g., FreeFall not triggering)
   - Ensure FallTimeout is decremented and that the grounded state is reset upon contact.
   - Verify Animator controller conditions for FreeFall and Grounded transitions.
+- **Updated** Physics API compatibility issues
+  - Ensure rigidbody-based systems use `linearDamping` instead of `drag` for ground friction calculations.
+  - Replace `velocity` with `linearVelocity` for physics operations to maintain compatibility with newer Unity versions.
+  - Verify that speed control methods use `linearVelocity.magnitude` for accurate velocity magnitude calculations.
 
 **Section sources**
 - [PlayerController.cs:174-189](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L174-L189)
 - [PlayerController.cs:361-423](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L361-L423)
 - [PlayerAnimator.controller:240-264](file://Assets/FPS-Game/Animations/StarterAssets/MainAni/PlayerAnimator.controller#L240-L264)
+- [PlayerMovement.cs:59-62](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L59-L62)
+- [PlayerMovement.cs:137-144](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L137-L144)
 
 ## Conclusion
-The movement system combines a robust CharacterController-based approach with a dual-mode input pipeline supporting both human and AI agents. It emphasizes smooth interpolation, precise ground detection, realistic jump/physics, and tight Animator synchronization. Proper tuning of movement parameters and careful handling of ground checks and rotation smoothing yield responsive and reliable locomotion suitable for both single-player and networked environments.
+The movement system combines a robust CharacterController-based approach with a dual-mode input pipeline supporting both human and AI agents. It emphasizes smooth interpolation, precise ground detection, realistic jump/physics, and tight Animator synchronization. The system has been updated to reflect Unity's Physics API evolution, utilizing modern properties like `linearDamping` and `linearVelocity` for improved performance and future compatibility. Proper tuning of movement parameters and careful handling of ground checks and rotation smoothing yield responsive and reliable locomotion suitable for both single-player and networked environments.

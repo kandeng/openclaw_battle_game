@@ -11,7 +11,19 @@
 - [PlayerSwitchWeapon.cs](file://Assets/FPS-Game/Scripts/PlayerSwitchWeapon.cs)
 - [PlayerWeapon.cs](file://Assets/FPS-Game/Scripts/PlayerWeapon.cs)
 - [PlayerInputTest.cs](file://Assets/FPS-Game/Scripts/PlayerInputTest.cs)
+- [CommandRouter.cs](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs)
+- [PlayerReload.cs](file://Assets/FPS-Game/Scripts/Player/PlayerReload.cs)
+- [PlayerInventory.cs](file://Assets/FPS-Game/Scripts/Player/PlayerInventory.cs)
+- [AIInputFeeder.cs](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive documentation for CommandRouter.cs WebSocket command handling system
+- Updated WebSocket integration section to reflect current implementation status
+- Added documentation for AIInputFeeder integration with WebSocket commands
+- Updated troubleshooting guide to address WebSocket command limitations
+- Enhanced networking considerations for WebSocket-controlled players
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -19,14 +31,17 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+6. [WebSocket Command System](#websocket-command-system)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
 This document explains the comprehensive player controller implementation in the game, focusing on movement mechanics, locomotion, weapon handling, and damage calculation. It documents input processing, character physics, collision detection, and animation integration. It also covers configuration options for player attributes, weapon parameters, and movement settings, and outlines relationships with networking and UI systems. Practical examples are referenced from the actual codebase to illustrate movement states, weapon switching, shooting mechanics, and health management. Guidance is included for addressing common issues such as input lag, movement smoothing, and weapon recoil.
+
+**Updated** Added WebSocket command routing system for AI agent control and AIInputFeeder integration for external input sources.
 
 ## Project Structure
 The player system is implemented primarily under Assets/FPS-Game/Scripts/Player. Key modules include:
@@ -38,6 +53,9 @@ The player system is implemented primarily under Assets/FPS-Game/Scripts/Player.
 - PlayerMovement: Alternative movement implementation using forces and drag for rigidbody-based movement.
 - PlayerSwitchWeapon and PlayerWeapon: Weapon inventory and switching scaffolding.
 - PlayerInputTest: A minimal input test script demonstrating Input System integration.
+- CommandRouter: WebSocket command routing system for AI agent control and external input sources.
+- PlayerReload and PlayerInventory: Reload mechanics and weapon inventory management.
+- AIInputFeeder: External input source integration for AI and WebSocket-controlled agents.
 
 ```mermaid
 graph TB
@@ -50,6 +68,10 @@ PMove["PlayerMovement.cs"]
 PSwitch["PlayerSwitchWeapon.cs"]
 PWeapon["PlayerWeapon.cs"]
 PInputTest["PlayerInputTest.cs"]
+CmdRouter["CommandRouter.cs"]
+PReload["PlayerReload.cs"]
+PInv["PlayerInventory.cs"]
+AIInput["AIInputFeeder.cs"]
 PC --> PInputs
 PC --> PAnim
 PC --> PMove
@@ -59,6 +81,11 @@ PAnim --> PC
 PSwitch --> PC
 PWeapon --> PC
 PInputTest --> PInputs
+CmdRouter --> PC
+CmdRouter --> AIInput
+PReload --> PC
+PInv --> PC
+AIInput --> PC
 ```
 
 **Diagram sources**
@@ -71,6 +98,10 @@ PInputTest --> PInputs
 - [PlayerSwitchWeapon.cs:1-55](file://Assets/FPS-Game/Scripts/PlayerSwitchWeapon.cs#L1-L55)
 - [PlayerWeapon.cs:1-25](file://Assets/FPS-Game/Scripts/PlayerWeapon.cs#L1-L25)
 - [PlayerInputTest.cs:1-32](file://Assets/FPS-Game/Scripts/PlayerInputTest.cs#L1-L32)
+- [CommandRouter.cs:1-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L1-L252)
+- [PlayerReload.cs:1-123](file://Assets/FPS-Game/Scripts/Player/PlayerReload.cs#L1-L123)
+- [PlayerInventory.cs:1-138](file://Assets/FPS-Game/Scripts/Player/PlayerInventory.cs#L1-L138)
+- [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
 
 **Section sources**
 - [PlayerController.cs:1-486](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L1-L486)
@@ -82,6 +113,10 @@ PInputTest --> PInputs
 - [PlayerSwitchWeapon.cs:1-55](file://Assets/FPS-Game/Scripts/PlayerSwitchWeapon.cs#L1-L55)
 - [PlayerWeapon.cs:1-25](file://Assets/FPS-Game/Scripts/PlayerWeapon.cs#L1-L25)
 - [PlayerInputTest.cs:1-32](file://Assets/FPS-Game/Scripts/PlayerInputTest.cs#L1-L32)
+- [CommandRouter.cs:1-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L1-L252)
+- [PlayerReload.cs:1-123](file://Assets/FPS-Game/Scripts/Player/PlayerReload.cs#L1-L123)
+- [PlayerInventory.cs:1-138](file://Assets/FPS-Game/Scripts/Player/PlayerInventory.cs#L1-L138)
+- [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
 
 ## Core Components
 - PlayerAssetsInputs: Provides input events for movement, look, jump, sprint, aim, shoot, reload, inventory, scoreboard, interact, hotkeys, and escape UI. It supports enabling/disabling input and manages cursor lock state.
@@ -92,6 +127,10 @@ PInputTest --> PInputs
 - PlayerMovement: Alternative rigidbody-based movement with force application, drag control, and grounded raycast.
 - PlayerSwitchWeapon and PlayerWeapon: Provide weapon inventory and switching hooks for hotkeys.
 - PlayerInputTest: Demonstrates Input System usage with OnMove/OnLook callbacks.
+- CommandRouter: Routes WebSocket commands to PlayerController via AIInputFeeder for AI agent control.
+- PlayerReload: Manages weapon reloading mechanics with cooldown timers and audio feedback.
+- PlayerInventory: Handles weapon inventory, ammo management, and reload operations.
+- AIInputFeeder: Provides external input source integration for AI and WebSocket-controlled agents.
 
 **Section sources**
 - [PlayerAssetsInputs.cs:1-240](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L1-L240)
@@ -103,6 +142,10 @@ PInputTest --> PInputs
 - [PlayerSwitchWeapon.cs:1-55](file://Assets/FPS-Game/Scripts/PlayerSwitchWeapon.cs#L1-L55)
 - [PlayerWeapon.cs:1-25](file://Assets/FPS-Game/Scripts/PlayerWeapon.cs#L1-L25)
 - [PlayerInputTest.cs:1-32](file://Assets/FPS-Game/Scripts/PlayerInputTest.cs#L1-L32)
+- [CommandRouter.cs:1-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L1-L252)
+- [PlayerReload.cs:1-123](file://Assets/FPS-Game/Scripts/Player/PlayerReload.cs#L1-L123)
+- [PlayerInventory.cs:1-138](file://Assets/FPS-Game/Scripts/Player/PlayerInventory.cs#L1-L138)
+- [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
 
 ## Architecture Overview
 The player system follows a modular, Netcode-for-GameObjects (NFGO) architecture:
@@ -111,6 +154,7 @@ The player system follows a modular, Netcode-for-GameObjects (NFGO) architecture
 - Server-authoritative damage: PlayerShoot performs raycast and delegates damage via ServerRpc to PlayerTakeDamage.
 - Animation and audio: PlayerAnimation updates animator parameters and triggers audio events handled by PlayerController.
 - Optional rigidbody movement: PlayerMovement offers an alternative movement model using forces and drag.
+- WebSocket integration: CommandRouter routes external commands to PlayerController via AIInputFeeder for AI agent control.
 
 ```mermaid
 sequenceDiagram
@@ -119,6 +163,8 @@ participant Controller as "PlayerController.cs"
 participant Shooter as "PlayerShoot.cs"
 participant Server as "PlayerTakeDamage.cs"
 participant Anim as "PlayerAnimation.cs"
+participant CmdRouter as "CommandRouter.cs"
+participant AIInput as "AIInputFeeder.cs"
 Input->>Controller : "move, look, jump, sprint, shoot"
 Controller->>Controller : "GroundedCheck(), JumpAndGravity(), Move()"
 Controller->>Shooter : "Shoot(gunType)"
@@ -126,6 +172,9 @@ Shooter->>Server : "HandleServerShoot_ServerRPC(...)"
 Server-->>Shooter : "ChangeHPServerRpc(...)"
 Shooter-->>Controller : "BulletHitSpawn_ClientRpc(...)"
 Anim-->>Controller : "OnFootstep()/OnLand()"
+CmdRouter->>AIInput : "ExecuteMove/Look/Shoot"
+AIInput->>Controller : "OnMove/OnLook/OnAttack"
+Controller->>Controller : "Process AI Input"
 ```
 
 **Diagram sources**
@@ -134,6 +183,8 @@ Anim-->>Controller : "OnFootstep()/OnLand()"
 - [PlayerShoot.cs:1-162](file://Assets/FPS-Game/Scripts/Player/PlayerShoot.cs#L1-L162)
 - [PlayerTakeDamage.cs:1-124](file://Assets/FPS-Game/Scripts/Player/PlayerTakeDamage.cs#L1-L124)
 - [PlayerAnimation.cs:1-50](file://Assets/FPS-Game/Scripts/Player/PlayerAnimation.cs#L1-L50)
+- [CommandRouter.cs:1-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L1-L252)
+- [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
 
 ## Detailed Component Analysis
 
@@ -153,7 +204,7 @@ Anim-->>Controller : "OnFootstep()/OnLand()"
   - Respects device type for delta-time multiplier.
 - Animation integration:
   - Sets animator parameters for speed, motion speed, grounded, jump, free fall, and velocity blends.
-  - Delegates footstep and landing audio to PlayerAnimation, which calls PlayerController’s audio handlers.
+  - Delegates footstep and landing audio to PlayerAnimation, which calls PlayerController's audio handlers.
 - Bot mode:
   - Supports AI-driven movement and rotation using external AI input feeder.
 
@@ -355,11 +406,75 @@ PlayerSwitchWeapon ..> PlayerWeapon : "manages activation"
 **Section sources**
 - [PlayerInputTest.cs:1-32](file://Assets/FPS-Game/Scripts/PlayerInputTest.cs#L1-L32)
 
+## WebSocket Command System
+
+**Updated** Added comprehensive WebSocket command routing system for AI agent control.
+
+The CommandRouter system provides WebSocket-based command routing for AI agents and external control systems:
+
+### CommandRouter: WebSocket Command Processing
+- Executes commands received from WebSocket clients for AI agent control
+- Translates high-level commands into PlayerController input via AIInputFeeder
+- Validates command timestamps and data ranges before processing
+- Routes commands to appropriate handlers based on command type
+
+### Supported Commands
+- MOVE: Processes movement vectors for AI input feeding
+- LOOK: Handles camera rotation and aiming via Euler angles
+- SHOOT: Initiates shooting with optional duration-based timing
+- JUMP: Placeholder for jump command (currently commented out)
+- RELOAD: Placeholder for reload command (currently commented out)
+- SWITCH_WEAPON: Placeholder for weapon switching (currently commented out)
+- STOP: Stops all movement and shooting actions
+
+### Command Validation
+- Timestamp validation rejects commands older than 5 seconds
+- Data range validation ensures movement directions and look angles are within acceptable bounds
+- Command type validation prevents unknown or malformed commands
+
+### AIInputFeeder Integration
+- Provides external input source for AI agents and WebSocket-controlled players
+- Exposes Action-based events for move, look, and attack inputs
+- Bridges external commands to PlayerAssetsInputs for seamless integration
+
+```mermaid
+sequenceDiagram
+participant WS as "WebSocket Client"
+participant Router as "CommandRouter.cs"
+participant AI as "AIInputFeeder.cs"
+participant PC as "PlayerController.cs"
+WS->>Router : "AgentCommand (MOVE/LOOK/SHOOT/JUMP)"
+Router->>Router : "ValidateCommand()"
+Router->>AI : "ExecuteMove/Look/Shoot"
+AI->>PC : "OnMove/OnLook/OnAttack"
+PC->>PC : "Process AI Input"
+PC->>PC : "Update Movement/Animation"
+```
+
+**Diagram sources**
+- [CommandRouter.cs:14-66](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L14-L66)
+- [CommandRouter.cs:115-152](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L115-L152)
+- [AIInputFeeder.cs:8-27](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L8-L27)
+
+**Section sources**
+- [CommandRouter.cs:1-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L1-L252)
+- [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
+
+### PlayerReload and PlayerInventory: Advanced Weapon Management
+- PlayerReload: Manages weapon reloading with cooldown timers, audio feedback, and state management
+- PlayerInventory: Handles weapon inventory, ammo management, and reload operations with UI integration
+
+**Section sources**
+- [PlayerReload.cs:1-123](file://Assets/FPS-Game/Scripts/Player/PlayerReload.cs#L1-L123)
+- [PlayerInventory.cs:1-138](file://Assets/FPS-Game/Scripts/Player/PlayerInventory.cs#L1-L138)
+
 ## Dependency Analysis
 - PlayerController depends on PlayerAssetsInputs for input, CharacterController for movement, Animator for animations, and PlayerShoot for shooting.
 - PlayerShoot depends on PlayerRoot.WeaponHolder for weapon stats and PlayerTakeDamage for applying damage.
 - PlayerTakeDamage depends on NetworkManager for player lookup and PlayerNetwork for counters.
 - PlayerAnimation depends on PlayerController for audio events and PlayerRoot for UI updates.
+- CommandRouter depends on AIInputFeeder for external input integration and GameObject.FindObjectOfType for player lookup.
+- PlayerReload and PlayerInventory depend on PlayerRoot events for coordination and UI updates.
 
 ```mermaid
 graph TB
@@ -368,6 +483,10 @@ Controller --> Anim["PlayerAnimation.cs"]
 Controller --> Shoot["PlayerShoot.cs"]
 Shoot --> Damage["PlayerTakeDamage.cs"]
 Anim --> Controller
+CmdRouter["CommandRouter.cs"] --> AIInput["AIInputFeeder.cs"]
+AIInput --> Controller
+PReload["PlayerReload.cs"] --> Controller
+PInv["PlayerInventory.cs"] --> Controller
 ```
 
 **Diagram sources**
@@ -376,6 +495,10 @@ Anim --> Controller
 - [PlayerShoot.cs:1-162](file://Assets/FPS-Game/Scripts/Player/PlayerShoot.cs#L1-L162)
 - [PlayerTakeDamage.cs:1-124](file://Assets/FPS-Game/Scripts/Player/PlayerTakeDamage.cs#L1-L124)
 - [PlayerAnimation.cs:1-50](file://Assets/FPS-Game/Scripts/Player/PlayerAnimation.cs#L1-L50)
+- [CommandRouter.cs:1-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L1-L252)
+- [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
+- [PlayerReload.cs:1-123](file://Assets/FPS-Game/Scripts/Player/PlayerReload.cs#L1-L123)
+- [PlayerInventory.cs:1-138](file://Assets/FPS-Game/Scripts/Player/PlayerInventory.cs#L1-L138)
 
 **Section sources**
 - [PlayerController.cs:1-486](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L1-L486)
@@ -383,6 +506,10 @@ Anim --> Controller
 - [PlayerTakeDamage.cs:1-124](file://Assets/FPS-Game/Scripts/Player/PlayerTakeDamage.cs#L1-L124)
 - [PlayerAnimation.cs:1-50](file://Assets/FPS-Game/Scripts/Player/PlayerAnimation.cs#L1-L50)
 - [PlayerAssetsInputs.cs:1-240](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L1-L240)
+- [CommandRouter.cs:1-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L1-L252)
+- [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
+- [PlayerReload.cs:1-123](file://Assets/FPS-Game/Scripts/Player/PlayerReload.cs#L1-L123)
+- [PlayerInventory.cs:1-138](file://Assets/FPS-Game/Scripts/Player/PlayerInventory.cs#L1-L138)
 
 ## Performance Considerations
 - Movement smoothing:
@@ -397,8 +524,11 @@ Anim --> Controller
   - Keep animator parameters minimal and avoid excessive layer weight transitions.
 - Networking:
   - Minimize ServerRpc/ClientRpc calls by batching UI updates and limiting hit effect spawns.
+- WebSocket commands:
+  - Implement command throttling to prevent overwhelming the AIInputFeeder with rapid successive commands.
+  - Consider command queuing for high-frequency movement commands to maintain smooth AI behavior.
 
-[No sources needed since this section provides general guidance]
+**Updated** Added WebSocket command performance considerations for AI agent control systems.
 
 ## Troubleshooting Guide
 - Input lag:
@@ -414,17 +544,29 @@ Anim --> Controller
   - Ensure shooter identity checks compare OwnerClientId and NetworkObjectId to prevent self-damage.
 - Health updates:
   - Confirm HP NetworkVariable subscriptions and UI updates occur only for the local owner in PlayerTakeDamage.
+- WebSocket commands:
+  - Verify CommandRouter validates commands properly and rejects expired or malformed commands.
+  - Check that AIInputFeeder is properly initialized and receiving external input events.
+  - Monitor command processing delays and implement appropriate throttling mechanisms.
+- AI agent control:
+  - Ensure GetPlayerForAgent method correctly identifies the target player instance.
+  - Verify that AIInputFeeder events are properly mapped to PlayerAssetsInputs methods.
+  - Check that external command sources are sending properly formatted AgentCommand objects.
+
+**Updated** Added WebSocket command troubleshooting for AI agent control systems.
 
 **Section sources**
 - [PlayerAssetsInputs.cs:1-240](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L1-L240)
 - [PlayerController.cs:1-486](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L1-L486)
 - [PlayerShoot.cs:1-162](file://Assets/FPS-Game/Scripts/Player/PlayerShoot.cs#L1-L162)
 - [PlayerTakeDamage.cs:1-124](file://Assets/FPS-Game/Scripts/Player/PlayerTakeDamage.cs#L1-L124)
+- [CommandRouter.cs:1-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L1-L252)
+- [AIInputFeeder.cs:1-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L1-L29)
 
 ## Conclusion
-The player system combines robust input handling, authoritative networking, and integrated animation to deliver responsive first-person movement and combat. PlayerController orchestrates locomotion and camera behavior, PlayerAssetsInputs centralizes input, PlayerShoot enforces server-authoritative damage, and PlayerTakeDamage manages health and scoring. Extensions for weapon recoil, smoother movement, and UI feedback are straightforward given the modular design.
+The player system combines robust input handling, authoritative networking, and integrated animation to deliver responsive first-person movement and combat. PlayerController orchestrates locomotion and camera behavior, PlayerAssetsInputs centralizes input, PlayerShoot enforces server-authoritative damage, and PlayerTakeDamage manages health and scoring. The addition of WebSocket command routing through CommandRouter enables AI agent control and external input sources, while PlayerReload and PlayerInventory provide advanced weapon management capabilities. Extensions for weapon recoil, smoother movement, and UI feedback are straightforward given the modular design.
 
-[No sources needed since this section summarizes without analyzing specific files]
+**Updated** Enhanced conclusion to reflect WebSocket command system integration and AI agent control capabilities.
 
 ## Appendices
 
@@ -439,10 +581,18 @@ The player system combines robust input handling, authoritative networking, and 
   - LandingAudioClip, FootstepAudioClips[], FootstepAudioVolume.
 - Input settings (PlayerAssetsInputs):
   - analogMovement, cursorLocked, cursorInputForLook, IsInputEnabled.
+- WebSocket command settings (CommandRouter):
+  - Command timestamp validation threshold (5 seconds), movement direction magnitude limits, look angle constraints.
+- AI input settings (AIInputFeeder):
+  - External input event mapping, action-based callback system.
+
+**Updated** Added WebSocket command and AI input configuration options.
 
 **Section sources**
 - [PlayerController.cs:15-44](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L15-L44)
 - [PlayerAssetsInputs.cs:29-36](file://Assets/FPS-Game/Scripts/Player/PlayerAssetsInputs.cs#L29-L36)
+- [CommandRouter.cs:73-107](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L73-L107)
+- [AIInputFeeder.cs:4-28](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L4-L28)
 
 ### Example References
 - Movement states and speed control:
@@ -457,3 +607,19 @@ The player system combines robust input handling, authoritative networking, and 
   - [PlayerController.cs:285-286](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L285-L286)
 - RigidBody movement alternative:
   - [PlayerMovement.cs:124-145](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L124-L145)
+- WebSocket command processing:
+  - [CommandRouter.cs:14-66](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L14-L66)
+- AI input event handling:
+  - [AIInputFeeder.cs:12-28](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L12-L28)
+
+**Updated** Added WebSocket command and AI input examples.
+
+**Section sources**
+- [PlayerController.cs:191-211](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L191-L211)
+- [PlayerShoot.cs:68-146](file://Assets/FPS-Game/Scripts/Player/PlayerShoot.cs#L68-L146)
+- [PlayerShoot.cs:35-65](file://Assets/FPS-Game/Scripts/Player/PlayerShoot.cs#L35-L65)
+- [PlayerTakeDamage.cs:46-83](file://Assets/FPS-Game/Scripts/Player/PlayerTakeDamage.cs#L46-L83)
+- [PlayerController.cs:285-286](file://Assets/FPS-Game/Scripts/Player/PlayerController.cs#L285-L286)
+- [PlayerMovement.cs:124-145](file://Assets/FPS-Game/Scripts/PlayerMovement.cs#L124-L145)
+- [CommandRouter.cs:14-66](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L14-L66)
+- [AIInputFeeder.cs:12-28](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L12-L28)

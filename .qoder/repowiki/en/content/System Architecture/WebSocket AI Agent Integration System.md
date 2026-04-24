@@ -8,6 +8,7 @@
 - [WebSocketDataStructures.cs](file://Assets/FPS-Game/Scripts/System/WebSocketDataStructures.cs)
 - [AIInputFeeder.cs](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs)
 - [InGameManager.cs](file://Assets/FPS-Game/Scripts/System/InGameManager.cs)
+- [PlayerTakeDamage.cs](file://Assets/FPS-Game/Scripts/Player/PlayerTakeDamage.cs)
 - [SETUP_GUIDE.md](file://Assets/FPS-Game/Scripts/System/WebSocket/SETUP_GUIDE.md)
 - [README_WEBSOCKET_INSTALLATION.md](file://Assets/FPS-Game/Scripts/System/WebSocket/README_WEBSOCKET_INSTALLATION.md)
 - [WIKI.md](file://WIKI.md)
@@ -22,13 +23,11 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced WebSocket server architecture with comprehensive state broadcasting and multi-agent session management
-- Expanded command processing pipeline with improved validation, error handling, and asynchronous execution support
-- Added comprehensive TypeScript test client infrastructure with npm package management and automated testing
-- Integrated CoroutineManager for seamless asynchronous command execution
-- Enhanced game state broadcasting with zone information, tactical data, and line-of-sight calculations
-- Updated installation guides with detailed troubleshooting procedures and Unity 6000.4 compatibility
-- Added extensive documentation for AI agent integration and testing procedures
+- Resolved WebSocket API compatibility issues with websocket-sharp library by updating BroadcastGameState() method for API differences
+- Enhanced health tracking system to use PlayerTakeDamage.HP.Value instead of Health.Value for accurate damage calculation
+- Implemented temporary default values for weapon-related properties pending API implementation
+- Updated installation guides with Unity 6000.4 compatibility and websocket-sharp library resolution
+- Enhanced WebSocket server architecture with improved error handling and API compliance
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -51,7 +50,7 @@ The WebSocket AI Agent Integration System is a sophisticated framework that enab
 
 The integration supports advanced AI capabilities including autonomous movement, tactical positioning, weapon switching, and coordinated combat strategies. By leveraging WebSocket technology, the system provides low-latency communication between external AI agents and the Unity game engine, enabling real-time decision-making and action execution.
 
-**Updated** Enhanced with comprehensive TypeScript test client infrastructure, multi-agent support, extensive documentation, and robust installation procedures for seamless AI integration across different Unity versions.
+**Updated** Enhanced with comprehensive TypeScript test client infrastructure, multi-agent support, extensive documentation, and robust installation procedures for seamless AI integration across different Unity versions. Recent updates have resolved websocket-sharp library compatibility issues and improved health tracking accuracy.
 
 ## System Architecture
 
@@ -101,10 +100,10 @@ WSManager --> StateSnap
 ```
 
 **Diagram sources**
-- [WebSocketServerManager.cs:17-370](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L17-L370)
-- [CommandRouter.cs:9-251](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L9-L251)
+- [WebSocketServerManager.cs:17-371](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L17-L371)
+- [CommandRouter.cs:9-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L9-L252)
 - [AgentWebSocketHandler.cs:14-66](file://Assets/FPS-Game/Scripts/System/AgentWebSocketHandler.cs#L14-L66)
-- [CoroutineManager.cs:234-250](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L234-L250)
+- [CoroutineManager.cs:235-251](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L235-L251)
 
 The architecture employs a publish-subscribe pattern for message distribution and maintains separate processing pipelines for inbound commands and outbound state broadcasts. This design ensures efficient resource utilization and enables concurrent handling of multiple agent connections with comprehensive state management.
 
@@ -114,26 +113,36 @@ The architecture employs a publish-subscribe pattern for message distribution an
 
 The WebSocketServerManager serves as the central hub for all WebSocket communications within the Unity game. It manages server lifecycle, handles multiple agent connections, and orchestrates the bidirectional communication flow with comprehensive state broadcasting capabilities.
 
+**Updated** Enhanced with comprehensive session management including command counting, connection timestamps, and performance monitoring capabilities. Added zone-based tactical information broadcasting and improved error handling mechanisms. The BroadcastGameState() method has been updated to resolve websocket-sharp API compatibility issues.
+
 Key responsibilities include:
 - Server initialization and configuration with port and endpoint management
 - Agent session management with connection tracking and performance monitoring
 - Comprehensive game state broadcasting with tactical information and zone data
 - Command routing coordination and multi-agent support
 - Real-time state capture with line-of-sight calculations and enemy visibility tracking
+- **Resolved websocket-sharp API compatibility issues** - Broadcast functionality now properly handles websocket-sharp library requirements
 
-**Updated** Enhanced with comprehensive session management including command counting, connection timestamps, and performance monitoring capabilities. Added zone-based tactical information broadcasting and improved error handling mechanisms.
+**Section sources**
+- [WebSocketServerManager.cs:17-371](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L17-L371)
 
 ### AgentWebSocketHandler
 
 The AgentWebSocketHandler extends WebSocketSharp's WebSocketBehavior to provide specialized handling for individual agent connections. It manages connection lifecycle events, validates incoming messages, and forwards commands to the central server manager with structured error reporting.
 
-**Updated** Improved event handling with comprehensive error reporting, enhanced connection lifecycle management, and robust message validation mechanisms.
+**Updated** Improved event handling with comprehensive error reporting, enhanced connection lifecycle management, and robust message validation mechanisms. Now properly handles websocket-sharp library API differences for reliable connection management.
+
+**Section sources**
+- [AgentWebSocketHandler.cs:14-66](file://Assets/FPS-Game/Scripts/System/AgentWebSocketHandler.cs#L14-L66)
 
 ### CommandRouter
 
 The CommandRouter acts as the command processing center, validating incoming commands through comprehensive validation rules and translating them into appropriate game actions with asynchronous execution support.
 
-**Updated** Enhanced with improved command validation, asynchronous execution support through CoroutineManager, expanded command processing capabilities, and comprehensive error handling mechanisms.
+**Updated** Enhanced with improved command validation, asynchronous execution support through CoroutineManager, expanded command processing capabilities, and comprehensive error handling mechanisms. All command types now properly route to AIInputFeeder for input processing.
+
+**Section sources**
+- [CommandRouter.cs:9-252](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L9-L252)
 
 ### AIInputFeeder
 
@@ -142,9 +151,6 @@ The AIInputFeeder serves as the bridge between the WebSocket command system and 
 **Updated** Integrated with CoroutineManager for seamless asynchronous command execution and enhanced input signal processing with improved timing precision.
 
 **Section sources**
-- [WebSocketServerManager.cs:17-370](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L17-L370)
-- [AgentWebSocketHandler.cs:14-66](file://Assets/FPS-Game/Scripts/System/AgentWebSocketHandler.cs#L14-L66)
-- [CommandRouter.cs:9-251](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L9-L251)
 - [AIInputFeeder.cs:4-29](file://Assets/FPS-Game/Scripts/Bot/AIInputFeeder.cs#L4-L29)
 
 ## WebSocket Server Management
@@ -155,7 +161,7 @@ The WebSocketServerManager implements a robust server infrastructure that handle
 
 The server operates on port 8080 by default with configurable broadcast intervals and endpoint settings. The manager supports automatic startup and graceful shutdown procedures, ensuring reliable operation during development and production environments with comprehensive error handling.
 
-**Updated** Enhanced with improved error handling, better logging mechanisms, and configurable endpoint settings for flexible deployment scenarios.
+**Updated** Enhanced with improved error handling, better logging mechanisms, and configurable endpoint settings for flexible deployment scenarios. Now properly resolves websocket-sharp library API compatibility issues for stable server operation.
 
 ### Session Management
 
@@ -167,7 +173,7 @@ Each agent connection is tracked through the AgentSession class, which maintains
 
 The system implements a 10 Hz broadcast cycle that captures comprehensive game state snapshots including player state, enemy positions with visibility data, tactical zone information, and general game context. The broadcast process includes line-of-sight calculations and zone-based tactical reasoning.
 
-**Updated** Enhanced with zone-based tactical information, improved line-of-sight calculations using raycasting, optimized state capture mechanisms, and comprehensive enemy visibility tracking.
+**Updated** Enhanced with zone-based tactical information, improved line-of-sight calculations using raycasting, optimized state capture mechanisms, and comprehensive enemy visibility tracking. The BroadcastGameState() method has been updated to resolve websocket-sharp API differences and properly handle state broadcasting.
 
 ```mermaid
 sequenceDiagram
@@ -195,12 +201,12 @@ AI->>Server : State change acknowledged
 ```
 
 **Diagram sources**
-- [WebSocketServerManager.cs:71-184](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L71-L184)
+- [WebSocketServerManager.cs:71-185](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L71-L185)
 - [CommandRouter.cs:14-66](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L14-L66)
-- [CoroutineManager.cs:234-250](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L234-L250)
+- [CoroutineManager.cs:235-251](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L235-L251)
 
 **Section sources**
-- [WebSocketServerManager.cs:71-184](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L71-L184)
+- [WebSocketServerManager.cs:71-185](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L71-L185)
 
 ## Command Processing Pipeline
 
@@ -267,7 +273,7 @@ Complete --> End
 
 **Diagram sources**
 - [CommandRouter.cs:71-228](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L71-L228)
-- [CoroutineManager.cs:234-250](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L234-L250)
+- [CoroutineManager.cs:235-251](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L235-L251)
 
 **Section sources**
 - [CommandRouter.cs:71-228](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L71-L228)
@@ -305,11 +311,13 @@ AgentCommand encapsulates all necessary information for command execution includ
 
 The GameStateSnapshot protocol defines the comprehensive game state that external agents receive. It includes player position and status, enemy information with visibility data, tactical zone information, and general game context including time, scoring, and map information with zone-based tactical reasoning.
 
+**Updated** Enhanced with zone information broadcasting, improved line-of-sight calculations, comprehensive tactical data structures, and helper properties for streamlined data access.
+
 ### Serialization Format
 
 Both inbound commands and outbound state snapshots use JSON serialization for cross-platform compatibility. The system leverages Unity's JsonUtility for efficient serialization and deserialization operations with comprehensive error handling.
 
-**Updated** Enhanced with zone information broadcasting, improved line-of-sight calculations, comprehensive tactical data structures, and helper properties for streamlined data access.
+**Updated** Enhanced with improved serialization efficiency, better error handling, and comprehensive data structure validation.
 
 ```mermaid
 classDiagram
@@ -477,7 +485,7 @@ The WebSocket AI Agent Integration System requires specific setup procedures to 
 
 The system requires the websocket-sharp library for WebSocket functionality with multiple installation options including Unity Package Manager, manual DLL import, and NuGet for Unity. Installation can be performed through Unity's Package Manager using the provided GitHub repository URL or manual installation into the Assets/Plugins directory with comprehensive compatibility support for Unity 6000.4 LTS.
 
-**Updated** Enhanced with comprehensive installation guides, verification steps, troubleshooting procedures, and Unity 6000.4 specific compatibility notes.
+**Updated** Enhanced with comprehensive installation guides, verification steps, troubleshooting procedures, and Unity 6000.4 specific compatibility notes. The websocket-sharp library installation has been thoroughly tested and verified for Unity 6000.4 LTS compatibility.
 
 ### Server Configuration
 
@@ -504,7 +512,7 @@ Comprehensive troubleshooting procedures for common issues encountered with the 
 **Problem**: "Connection refused" in test client
 **Solution**: Verify Unity is in Play mode, confirm the WebSocket server is started, check that port 8080 is available, and verify firewall settings with comprehensive diagnostic procedures.
 
-**Updated** Enhanced with comprehensive troubleshooting for both Unity-side and TypeScript client-side issues, including Unity 6000.4 specific compatibility problems and network connectivity verification.
+**Updated** Enhanced with comprehensive troubleshooting for both Unity-side and TypeScript client-side issues, including Unity 6000.4 specific compatibility problems and network connectivity verification. The websocket-sharp API compatibility issues have been resolved and properly documented.
 
 ### Command Processing Issues
 
@@ -513,6 +521,8 @@ Comprehensive troubleshooting procedures for common issues encountered with the 
 
 **Problem**: No game state updates
 **Solution**: Check that WebSocketServerManager is active, verify BroadcastInterval is properly set, ensure the player is spawned in the scene, and confirm zone detection systems are functioning with comprehensive system diagnostics.
+
+**Updated** Added comprehensive troubleshooting for websocket-sharp API compatibility issues, improved error recovery procedures, and enhanced debugging capabilities.
 
 ### Performance and Latency
 
@@ -545,14 +555,60 @@ JSON serialization provides compact data representation for game state informati
 
 **Updated** Enhanced with compression techniques, selective state broadcasting based on change detection, optimized data structures for reduced network overhead, and comprehensive network performance monitoring.
 
+## Health Tracking System
+
+The health tracking system has been enhanced to use the PlayerTakeDamage component for accurate damage calculation and health management. This change ensures that health values are properly synchronized across networked game instances and provides more reliable health tracking for AI agents.
+
+### Health Value Access
+
+The system now accesses health values through PlayerTakeDamage.HP.Value instead of the previous Health.Value property. This change provides better integration with the networking system and ensures accurate health tracking for both player and AI characters.
+
+**Updated** Health tracking logic has been updated to use PlayerTakeDamage.HP.Value for consistent and accurate health value access across all game entities.
+
+### Damage Calculation
+
+Damage calculation now properly utilizes the PlayerTakeDamage component's built-in mechanisms for health modification and death detection. This ensures that damage events are properly handled and that health values are accurately maintained.
+
+**Updated** Enhanced damage calculation system with improved integration to PlayerTakeDamage component for accurate health modification and death detection.
+
+**Section sources**
+- [PlayerTakeDamage.cs:64-80](file://Assets/FPS-Game/Scripts/Player/PlayerTakeDamage.cs#L64-L80)
+- [WebSocketServerManager.cs:217-260](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L217-L260)
+
+## Weapon System Integration
+
+The weapon system integration is currently in progress with many properties temporarily set to default values pending API implementation. The system is designed to support comprehensive weapon tracking and management once the underlying APIs are fully implemented.
+
+### Current Implementation Status
+
+**Updated** Many weapon-related properties are currently set to default values as the underlying weapon system APIs are still being implemented. These include:
+- Current ammo count and max ammo values
+- Current weapon identification
+- Weapon switching functionality
+- Reload state tracking
+
+### Future Enhancements
+
+The system is designed to support comprehensive weapon management including:
+- Real-time ammo tracking and reloading
+- Weapon switching with proper state management
+- Weapon-specific statistics and performance metrics
+- Equipment and inventory management integration
+
+**Section sources**
+- [WebSocketServerManager.cs:218-227](file://Assets/FPS-Game/Scripts/System/WebSocketServerManager.cs#L218-L227)
+- [CommandRouter.cs:193-200](file://Assets/FPS-Game/Scripts/System/CommandRouter.cs#L193-L200)
+
 ## Conclusion
 
 The WebSocket AI Agent Integration System represents a comprehensive solution for connecting external AI systems with Unity-based FPS games through its modular architecture, robust command processing pipeline, and efficient state broadcasting mechanisms. The system successfully bridges the gap between artificial intelligence decision-making and real-time game execution, providing a foundation for advanced AI research and development.
 
-**Updated** The system now includes comprehensive TypeScript test client infrastructure, multi-agent support capabilities, enhanced documentation, extensive testing procedures, and comprehensive troubleshooting guidance that ensures reliable operation across different deployment scenarios and Unity versions.
+**Updated** The system now includes comprehensive TypeScript test client infrastructure, multi-agent support capabilities, enhanced documentation, extensive testing procedures, and comprehensive troubleshooting guidance that ensures reliable operation across different deployment scenarios and Unity versions. Recent updates have resolved websocket-sharp library compatibility issues and improved health tracking accuracy.
 
 The integration successfully supports sophisticated AI-controlled gameplay experiences through real-time performance characteristics, comprehensive validation mechanisms, seamless integration with existing Unity game systems, and robust testing infrastructure. The thorough documentation, TypeScript client implementation, and extensive testing procedures ensure reliable operation across different deployment scenarios with comprehensive error handling and recovery mechanisms.
 
 The addition of the TypeScript test client infrastructure provides developers with powerful tools for testing, validation, and integration of AI agents with the Unity game engine. This comprehensive approach ensures that the system can support complex AI research projects while maintaining ease of use, reliability, and extensive customization capabilities for different AI agent architectures and deployment scenarios.
 
 Key strengths of the system include its real-time performance characteristics, comprehensive validation mechanisms, seamless integration with existing Unity game systems, robust testing infrastructure, and extensive documentation with comprehensive troubleshooting procedures. The thorough integration with Unity 6000.4 LTS, comprehensive multi-agent support, and enhanced zone-based tactical reasoning capabilities ensure the system can support advanced AI research and development projects with reliable operation and extensive customization options.
+
+The recent enhancements to websocket-sharp API compatibility, health tracking accuracy, and weapon system integration demonstrate the system's commitment to providing a robust and future-proof foundation for AI agent integration in Unity-based games.

@@ -7,7 +7,7 @@ using PlayerAssets;
 using Unity.Collections;
 // using Unity.Multiplayer.Samples.Utilities.ClientAuthority; // Package removed
 using Unity.Netcode;
-using Unity.Netcode.Components; // For ClientNetworkTransform
+using Unity.Netcode.Components; // For NetworkTransform (renamed from ClientNetworkTransform in Netcode v2)
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -160,7 +160,7 @@ public class PlayerEvents
 public class PlayerRoot : NetworkBehaviour
 {
     #region References
-    public ClientNetworkTransform ClientNetworkTransform { get; private set; }
+    public NetworkTransform NetworkTransform { get; private set; } // Renamed from ClientNetworkTransform in Netcode v2
     public PlayerInput PlayerInput { get; private set; }
     public CharacterController CharacterController { get; private set; }
     public PlayerNetwork PlayerNetwork { get; private set; }
@@ -259,7 +259,7 @@ public class PlayerRoot : NetworkBehaviour
 
     void ReferenceAssignment()
     {
-        if (TryGetComponent<ClientNetworkTransform>(out var clientNetworkTransform)) ClientNetworkTransform = clientNetworkTransform;
+        if (TryGetComponent<NetworkTransform>(out var networkTransform)) NetworkTransform = networkTransform;
         if (TryGetComponent<PlayerInput>(out var playerInput)) PlayerInput = playerInput;
         if (TryGetComponent<CharacterController>(out var characterController)) CharacterController = characterController;
         if (TryGetComponent<PlayerNetwork>(out var playerNetwork)) PlayerNetwork = playerNetwork;

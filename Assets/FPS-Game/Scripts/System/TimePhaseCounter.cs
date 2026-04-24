@@ -29,7 +29,7 @@ public class TimePhaseCounter : NetworkBehaviour
 
     public Action<int> OnTimeChanged;
 
-    [SerializeField] LobbyRelayChecker _lobbyRelayChecker;
+    // Removed: [SerializeField] LobbyRelayChecker _lobbyRelayChecker;
 
     public override void OnNetworkSpawn()
     {
@@ -37,11 +37,8 @@ public class TimePhaseCounter : NetworkBehaviour
         {
             StartPhase(MatchPhase.Waiting, waitingPhaseDuration);
 
-            _lobbyRelayChecker.StartChecking(LobbyManager.joinedLobby.Id);
-            _lobbyRelayChecker.onAllPlayersConnected += () =>
-            {
-                _countdownStarted.Value = true;
-            };
+            // Removed: Lobby/Relay checker - start countdown immediately
+            _countdownStarted.Value = true;
         }
 
         // UIs

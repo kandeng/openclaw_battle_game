@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 // using Unity.Multiplayer.Samples.Utilities.ClientAuthority; // Package removed
 using Unity.Netcode;
-using Unity.Netcode.Components; // For ClientNetworkTransform
+using Unity.Netcode.Components; // For NetworkTransform (renamed from ClientNetworkTransform in Netcode v2)
 using UnityEngine;
 
 public class Explosives : PlayerBehaviour
@@ -16,7 +16,7 @@ public class Explosives : PlayerBehaviour
     Collider _collider;
     SupplyLoad _supplyLoad;
 
-    ClientNetworkTransform _clientNetworkTransform;
+    NetworkTransform _networkTransform; // Renamed from ClientNetworkTransform in Netcode v2
     bool _onCoolDown = false;
 
     public bool EnableRadiusVisual;
@@ -41,7 +41,7 @@ public class Explosives : PlayerBehaviour
 
         if (_currentGrenade != null)
         {
-            _clientNetworkTransform = _currentGrenade.GetComponent<ClientNetworkTransform>();
+            _networkTransform = _currentGrenade.GetComponent<NetworkTransform>();
             _grenadeRb = _currentGrenade.GetComponent<Rigidbody>();
             _collider = _currentGrenade.GetComponent<Collider>();
 
@@ -52,7 +52,7 @@ public class Explosives : PlayerBehaviour
             _grenadeRb.isKinematic = true;
             _collider.enabled = false;
 
-            _clientNetworkTransform.enabled = false;
+            _networkTransform.enabled = false;
         }
 
         else
@@ -73,7 +73,7 @@ public class Explosives : PlayerBehaviour
     IEnumerator WaitOneFrame()
     {
         yield return null;
-        _clientNetworkTransform.enabled = true;
+        _networkTransform.enabled = true;
         _throwForce = 20f;
     }
 
@@ -175,7 +175,7 @@ public class Explosives : PlayerBehaviour
     {
         // _currentGrenade.SetActive(true);
 
-        _clientNetworkTransform.Interpolate = false;
+        _networkTransform.Interpolate = false;
         _grenadeRb.isKinematic = true;
         _collider.enabled = false;
 
@@ -201,9 +201,9 @@ public class Explosives : PlayerBehaviour
 
     void EnableInterpolation()
     {
-        if (_clientNetworkTransform != null)
+        if (_networkTransform != null)
         {
-            _clientNetworkTransform.Interpolate = true;
+            _networkTransform.Interpolate = true;
             _onCoolDown = false;
         }
     }

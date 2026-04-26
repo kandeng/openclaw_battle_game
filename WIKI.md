@@ -1,4 +1,4 @@
-# FPS Game - Technical Architecture & System Documentation
+# AI Controlled Battle Game - System Architecture
 
 ## Table of Contents
 
@@ -60,7 +60,7 @@ A **server-authoritative 3D multiplayer FPS game** built with Unity 6000.4 LTS f
                     ↕
 ┌─────────────────────────────────────────────────┐
 │  NETWORKING LAYER                               │
-│  Unity Relay + Lobby + Netcode (NGO)            │
+│  Direct UDP/IP + Netcode (NGO)                  │
 └─────────────────────────────────────────────────┘
                     ↕
 ┌─────────────────────────────────────────────────┐
@@ -154,7 +154,7 @@ Host Syncs Health → All Clients
 ### 3.3 Game Session System
 
 **InGameManager** Responsibilities:
-- Initialize game mode (Multiplayer/WebSocket/Single)
+- Initialize game mode (`Multiplayer`, `WebSocketAgent`, or `SinglePlayer`)
 - Manage game lifecycle (start, running, end)
 - Track match time and win conditions
 - Coordinate between subsystems
@@ -409,7 +409,10 @@ All Clients Update Scoreboard
 │  Injects input into PlayerController │
 │  ├── moveDir: Vector3                │
 │  ├── lookEuler: Vector3              │
-│  └── attack: bool                    │
+│  ├── OnAttack: Action<bool>          │
+│  ├── OnReload: Action<bool>          │
+│  ├── OnSwitchWeapon: Action<int>     │
+│  └── OnAim: Action<bool>            │
 └──────────────────────────────────────┘
 ```
 
@@ -593,7 +596,7 @@ Move to Zone C via portal, scan area
 
 **Usage**: Global managers
 ```csharp
-public class InGameManager : MonoBehaviour
+public class InGameManager : NetworkBehaviour
 {
     public static InGameManager Instance { get; private set; }
     
@@ -605,7 +608,6 @@ public class InGameManager : MonoBehaviour
             return;
         }
         Instance = this;
-        DontDestroyOnLoad(gameObject);
     }
 }
 ```
@@ -906,7 +908,7 @@ Assets/FPS-Game/Scripts/
 ├── Bot/
 │   ├── BotController.cs           # FSM state machine
 │   ├── AIInputFeeder.cs           # Bridge: command layer → PlayerAssetsInputs
-│   └── BotBlackboardLinker.cs     # BT data interface
+│   └── BlackboardLinker.cs        # BT data interface
 ├── System/
 │   ├── InGameManager.cs           # Game session manager
 │   ├── WebSocketServerManager.cs  # WebSocket server (broadcasts state, receives commands)
@@ -919,8 +921,7 @@ Assets/FPS-Game/Scripts/
 ├── Debug/
 │   └── DebugConsole.cs            # Secondary control path (C# API + OnGUI panel)
 ├── TacticalAI/
-│   ├── ZoneController.cs          # Zone management
-│   └── DijkstraPathfinding.cs     # Zone pathfinding
+│   ├── Core/ZoneManager.cs        # Zone management + Dijkstra pathfinding
 └── Network/
     └── [Network synchronization scripts]
 ```
@@ -936,7 +937,7 @@ Assets/FPS-Game/Scripts/
 - **Render Pipeline**: URP
 
 ### Network Settings
-- **Protocol**: UDP (via Relay)
+- **Protocol**: UDP (direct LAN/IP)
 - **Tick Rate**: 30 Hz
 - **Client Buffer**: 100ms
 - **Max Players**: 16
@@ -950,7 +951,7 @@ Assets/FPS-Game/Scripts/
 
 ---
 
-**Document Version**: 3.1  
-**Last Updated**: 2026-04-25  
+**Document Version**: 3.2  
+**Last Updated**: 2026-04-26  
 **Unity Version**: 6000.4 LTS  
 **Status**: Active Development
